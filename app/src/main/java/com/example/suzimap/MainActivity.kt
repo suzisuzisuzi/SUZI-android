@@ -3,7 +3,7 @@ package com.example.suzimap
 import android.app.AlertDialog
 import android.app.Dialog
 import android.os.Bundle
-import android.widget.Button
+import android.widget.ImageButton
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.fragment.app.DialogFragment
@@ -15,7 +15,11 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.maps.android.heatmaps.HeatmapTileProvider
 import com.google.maps.android.heatmaps.WeightedLatLng
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONArray
@@ -32,24 +36,26 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         setContentView(R.layout.activity_main)
         supportActionBar?.hide()
 
+
         val mapFragment = supportFragmentManager
             .findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
-        val changeMapType: Button = findViewById(R.id.btnChangeMapType)
-        changeMapType.setOnClickListener { view ->
+        val changeMapType: ImageButton = findViewById(R.id.changeMapType)
+        changeMapType.setOnClickListener {
             showMapTypes()
         }
 
     }
 
     private fun showMapTypes() {
-        // Create an instance of the dialog fragment and show it
-        val dialog = MapTypeSelectorDialogFragment()
+        val dialog = MapTypeSelector()
         dialog.show(supportFragmentManager, "MapTypeSelector")
     }
 
     override fun onMapReady(googleMap: GoogleMap) {
-        mMap = googleMap
+        mMap=googleMap
+        mMap.mapType = GoogleMap.MAP_TYPE_SATELLITE
+
 
         with(mMap.uiSettings) {
             isZoomControlsEnabled = true
@@ -70,7 +76,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
 
         mMap.isMyLocationEnabled = true
-        // Example of adding a marker with an info window
+        // example of adding a marker with an info window
         mMap.addMarker(
             MarkerOptions()
             .position(LatLng(19.0, 73.0))
@@ -96,25 +102,24 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     .opacity(1.0) // opacity of heatmap overlay
                     .build()
 
-
                 mMap.addTileOverlay(com.google.android.gms.maps.model.TileOverlayOptions().tileProvider(heatmapTileProvider))
             }
         }
     }
 
-    class MapTypeSelectorDialogFragment : DialogFragment() {
+    class MapTypeSelector : DialogFragment() {
         override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
             return activity?.let {
                 val builder = AlertDialog.Builder(it)
                 builder.setTitle(R.string.change_map)
-                    .setItems(R.array.map_types) { dialog, which ->
+                    .setItems(R.array.map_types) { _, which ->
                         // The 'which' argument contains the index position of the selected item
                         val mapType = when (which) {
                             0 -> GoogleMap.MAP_TYPE_NORMAL
                             1 -> GoogleMap.MAP_TYPE_SATELLITE
                             2 -> GoogleMap.MAP_TYPE_TERRAIN
                             3 -> GoogleMap.MAP_TYPE_HYBRID
-                            else -> GoogleMap.MAP_TYPE_NORMAL
+                            else -> GoogleMap.MAP_TYPE_SATELLITE
                         }
                         (activity as MainActivity).mMap.mapType = mapType
                     }

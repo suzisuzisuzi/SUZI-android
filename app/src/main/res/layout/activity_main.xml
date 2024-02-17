@@ -11,20 +11,20 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <Button
-        android:id="@+id/btnChangeMapType"
+    <ImageButton
+        android:id="@+id/changeMapType"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentTop="true"
-        android:background="#e56520"
-        android:elevation="6dp"
+        android:elevation="16dp"
+        android:src="@android:drawable/ic_dialog_map"
         android:layout_marginStart="16dp"
         android:padding="12dp"
         android:layout_marginTop="16dp"
+        android:background="@android:color/transparent"
         android:layout_marginEnd="16dp"
         android:layout_marginBottom="16dp"
         android:textColor="@color/white"
-        android:text="@string/change_map"
         />
 
 </RelativeLayout>
