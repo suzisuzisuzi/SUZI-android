@@ -1,8 +1,12 @@
 package com.example.suzimap
 
+import android.app.AlertDialog
+import android.app.Dialog
 import android.os.Bundle
+import android.widget.Button
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.fragment.app.DialogFragment
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
@@ -31,6 +35,17 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         val mapFragment = supportFragmentManager
             .findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
+        val changeMapType: Button = findViewById(R.id.btnChangeMapType)
+        changeMapType.setOnClickListener { view ->
+            showMapTypes()
+        }
+
+    }
+
+    private fun showMapTypes() {
+        // Create an instance of the dialog fragment and show it
+        val dialog = MapTypeSelectorDialogFragment()
+        dialog.show(supportFragmentManager, "MapTypeSelector")
     }
 
     override fun onMapReady(googleMap: GoogleMap) {
@@ -87,6 +102,26 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
+    class MapTypeSelectorDialogFragment : DialogFragment() {
+        override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
+            return activity?.let {
+                val builder = AlertDialog.Builder(it)
+                builder.setTitle(R.string.change_map)
+                    .setItems(R.array.map_types) { dialog, which ->
+                        // The 'which' argument contains the index position of the selected item
+                        val mapType = when (which) {
+                            0 -> GoogleMap.MAP_TYPE_NORMAL
+                            1 -> GoogleMap.MAP_TYPE_SATELLITE
+                            2 -> GoogleMap.MAP_TYPE_TERRAIN
+                            3 -> GoogleMap.MAP_TYPE_HYBRID
+                            else -> GoogleMap.MAP_TYPE_NORMAL
+                        }
+                        (activity as MainActivity).mMap.mapType = mapType
+                    }
+                builder.create()
+            } ?: throw IllegalStateException("Activity cannot be null")
+        }
+    }
 
     private suspend fun fetchGeoJsonData(url: String): String = withContext(ioDispatcher) {
         val client = OkHttpClient()
