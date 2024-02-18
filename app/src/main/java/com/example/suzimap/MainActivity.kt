@@ -4,6 +4,7 @@ import android.app.AlertDialog
 import android.app.Dialog
 import android.os.Bundle
 import android.widget.ImageButton
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.fragment.app.DialogFragment
@@ -27,35 +28,74 @@ import org.json.JSONArray
 class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
-
     private lateinit var mMap: GoogleMap
     private lateinit var heatmapTileProvider: HeatmapTileProvider
+    private lateinit var mapView: com.google.android.gms.maps.MapView // Initialize mapView here
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         supportActionBar?.hide()
 
+        mapView = findViewById(R.id.mapView) // Correctly initialize mapView
+        mapView.onCreate(savedInstanceState) // Important to call this
+        mapView.getMapAsync(this)
 
-        val mapFragment = supportFragmentManager
-            .findFragmentById(R.id.map) as SupportMapFragment
-        mapFragment.getMapAsync(this)
-        val changeMapType: ImageButton = findViewById(R.id.changeMapType)
+        val changeMapType: ImageButton = findViewById(R.id.btnChangeMapType)
+        var currentMapType = GoogleMap.MAP_TYPE_NORMAL
+
         changeMapType.setOnClickListener {
-            showMapTypes()
+            currentMapType = when (currentMapType) {
+                GoogleMap.MAP_TYPE_NORMAL -> GoogleMap.MAP_TYPE_SATELLITE
+                GoogleMap.MAP_TYPE_SATELLITE -> GoogleMap.MAP_TYPE_TERRAIN
+                GoogleMap.MAP_TYPE_TERRAIN -> GoogleMap.MAP_TYPE_HYBRID
+                GoogleMap.MAP_TYPE_HYBRID -> GoogleMap.MAP_TYPE_NORMAL
+                else -> GoogleMap.MAP_TYPE_NORMAL
+            }
+            mMap.mapType = currentMapType
         }
-
     }
 
-    private fun showMapTypes() {
-        val dialog = MapTypeSelector()
-        dialog.show(supportFragmentManager, "MapTypeSelector")
+    // Implement lifecycle methods
+    override fun onStart() {
+        super.onStart()
+        mapView.onStart()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        mapView.onResume()
+    }
+
+    override fun onPause() {
+        mapView.onPause()
+        super.onPause()
+    }
+
+    override fun onStop() {
+        mapView.onStop()
+        super.onStop()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        mapView.onSaveInstanceState(outState)
+    }
+
+    override fun onDestroy() {
+        mapView.onDestroy()
+        super.onDestroy()
+    }
+
+    override fun onLowMemory() {
+        super.onLowMemory()
+        mapView.onLowMemory()
     }
 
     override fun onMapReady(googleMap: GoogleMap) {
         mMap=googleMap
         mMap.mapType = GoogleMap.MAP_TYPE_SATELLITE
-
 
         with(mMap.uiSettings) {
             isZoomControlsEnabled = true
@@ -92,39 +132,24 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private fun addHeatmap() {
         CoroutineScope(ioDispatcher).launch {
-            val geoJsonData = fetchGeoJsonData("https://suzi-backend.onrender.com/gheatmap/test")
-            val list = parseGeoJsonData(geoJsonData)
+            try {
+                val geoJsonData = fetchGeoJsonData("https://suzi-backend.onrender.com/gheatmap/test")
+                val list = parseGeoJsonData(geoJsonData)
 
-            withContext(Dispatchers.Main) {
-                heatmapTileProvider = HeatmapTileProvider.Builder()
-                    .weightedData(list)
-                    .radius(50)
-                    .opacity(1.0) // opacity of heatmap overlay
-                    .build()
+                withContext(Dispatchers.Main) {
+                    heatmapTileProvider = HeatmapTileProvider.Builder()
+                        .weightedData(list)
+                        .radius(50)
+                        .opacity(1.0)
+                        .build()
 
-                mMap.addTileOverlay(com.google.android.gms.maps.model.TileOverlayOptions().tileProvider(heatmapTileProvider))
+                    mMap.addTileOverlay(com.google.android.gms.maps.model.TileOverlayOptions().tileProvider(heatmapTileProvider))
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@MainActivity, "Network timeout, please try again.", Toast.LENGTH_LONG).show()
+                }
             }
-        }
-    }
-
-    class MapTypeSelector : DialogFragment() {
-        override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-            return activity?.let {
-                val builder = AlertDialog.Builder(it)
-                builder.setTitle(R.string.change_map)
-                    .setItems(R.array.map_types) { _, which ->
-                        // The 'which' argument contains the index position of the selected item
-                        val mapType = when (which) {
-                            0 -> GoogleMap.MAP_TYPE_NORMAL
-                            1 -> GoogleMap.MAP_TYPE_SATELLITE
-                            2 -> GoogleMap.MAP_TYPE_TERRAIN
-                            3 -> GoogleMap.MAP_TYPE_HYBRID
-                            else -> GoogleMap.MAP_TYPE_SATELLITE
-                        }
-                        (activity as MainActivity).mMap.mapType = mapType
-                    }
-                builder.create()
-            } ?: throw IllegalStateException("Activity cannot be null")
         }
     }
 
